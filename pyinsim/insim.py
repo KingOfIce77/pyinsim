@@ -1,543 +1,13 @@
 # insim.py - InSim.txt replacement for pyinsim
 #
-# Copyright 2008-2015 Alex McBride <xandermcbride@gmail.com>
+# Copyright 2008-2020 Alex McBride <xandermcbride@gmail.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU Lesser General Public License version 3 or any later version.
 #
 
-import struct
 import math
-
-__all__ = [
-    'AXO_START_LIGHTS',
-    'BFN_CLEAR',
-    'BFN_DEL_BTN',
-    'BFN_REQUEST',
-    'BFN_USER_CLEAR',
-    'CAR_ALL',
-    'CAR_BF1',
-    'CAR_FBM',
-    'CAR_FO8',
-    'CAR_FOX',
-    'CAR_FXO',
-    'CAR_FXR',
-    'CAR_FZ5',
-    'CAR_FZR',
-    'CAR_LX4',
-    'CAR_LX6',
-    'CAR_MRT',
-    'CAR_NONE',
-    'CAR_RAC',
-    'CAR_RB4',
-    'CAR_UF1',
-    'CAR_UFR',
-    'CAR_XFG',
-    'CAR_XFR',
-    'CAR_XRG',
-    'CAR_XRR',
-    'CAR_XRT',
-    'CCI_BLUE',
-    'CCI_FIRST',
-    'CCI_LAG',
-    'CCI_LAST',
-    'CCI_YELLOW',
-    'CIM_NORMAL',
-    'CIM_OPTIONS',
-    'CIM_HOST_OPTIONS',
-    'CIM_GARAGE',
-    'CIM_CAR_SELECT',
-    'CIM_TRACK_SELECT',
-    'CIM_SHIFTU',
-    'CONF_CONFIRMED',
-    'CONF_DID_NOT_PIT',
-    'CONF_DISQ',
-    'CONF_MENTIONED',
-    'CONF_PENALTY_30',
-    'CONF_PENALTY_45',
-    'CONF_PENALTY_DT',
-    'CONF_PENALTY_SG',
-    'CONF_TIME',
-    'CarContOBJ',
-    'CarContact',
-    'CarHCP',
-    'CompCar',
-    'DL_ABS',
-    'DL_BATTERY',
-    'DL_FULLBEAM',
-    'DL_HANDBRAKE',
-    'DL_NUM',
-    'DL_OILWARN',
-    'DL_PITSPEED',
-    'DL_SHIFT',
-    'DL_SIGNAL_ANY',
-    'DL_SIGNAL_L',
-    'DL_SIGNAL_R',
-    'DL_SPARE',
-    'DL_TC',
-    'FVM_PLAIN',
-    'FVM_BUTTONS',
-    'FVM_EDIT',
-    'GRG_INFO',
-    'GRG_COLOURS',
-    'GRG_BRAKE_TC',
-    'GRG_SUSP',
-    'GRG_STEER',
-    'GRG_DRIVE',
-    'GRG_TYRES',
-    'GRG_AERO',
-    'GRG_PASS',
-    'HInfo',
-    'HOSTF_CAN_RESET',
-    'HOSTF_CAN_SELECT',
-    'HOSTF_CAN_VOTE',
-    'HOSTF_CRUISE',
-    'HOSTF_FCV',
-    'HOSTF_MID_RACE',
-    'HOSTF_MUST_PIT',
-    'HOS_FIRST',
-    'HOS_LAST',
-    'HOS_LICENSED',
-    'HOS_S1',
-    'HOS_S2',
-    'HOS_SPECPASS',
-    'INSIM_VERSION',
-    'INST_ALWAYS_ON',
-    'IRP_ARP',
-    'IRP_ARQ',
-    'IRP_ERR',
-    'IRP_HLR',
-    'IRP_HOS',
-    'IRP_SEL',
-    'IR_ARP',
-    'IR_ARQ',
-    'IR_ERR',
-    'IR_ERR_ADMIN',
-    'IR_ERR_HOSTNAME',
-    'IR_ERR_NOSPEC',
-    'IR_ERR_PACKET',
-    'IR_ERR_PACKET2',
-    'IR_ERR_SPEC',
-    'IR_HLR',
-    'IR_HOS',
-    'IR_SEL',
-    'ISB_C1',
-    'ISB_C2',
-    'ISB_C4',
-    'ISB_CLICK',
-    'ISB_CTRL',
-    'ISB_DARK',
-    'ISB_LEFT',
-    'ISB_LIGHT',
-    'ISB_LMB',
-    'ISB_RIGHT',
-    'ISB_RMB',
-    'ISB_SHIFT',
-    'ISF_AXM_EDIT',
-    'ISF_AXM_LOAD',
-    'ISF_CON',
-    'ISF_HLV',
-    'ISF_LOCAL',
-    'ISF_MCI',
-    'ISF_MSO_COLS',
-    'ISF_NLP',
-    'ISF_OBH',
-    'ISF_REQ_JOIN',
-    'ISF_RES_0',
-    'ISF_RES_1',
-    'ISP_ACR',
-    'ISP_AXI',
-    'ISP_AXM',
-    'ISP_AXO',
-    'ISP_BFN',
-    'ISP_BTC',
-    'ISP_BTN',
-    'ISP_BTT',
-    'ISP_CCH',
-    'ISP_CIM',
-    'ISP_CNL',
-    'ISP_CON',
-    'ISP_CPP',
-    'ISP_CPR',
-    'ISP_CRS',
-    'ISP_CSC',
-    'ISP_FIN',
-    'ISP_FLG',
-    'ISP_HCP',
-    'ISP_HLV',
-    'ISP_III',
-    'ISP_ISI',
-    'ISP_ISM',
-    'ISP_JRR',
-    'ISP_LAP',
-    'ISP_MCI',
-    'ISP_MOD',
-    'ISP_MSL',
-    'ISP_MSO',
-    'ISP_MST',
-    'ISP_MSX',
-    'ISP_MTC',
-    'ISP_NCI',
-    'ISP_NCN',
-    'ISP_NLP',
-    'ISP_NONE',
-    'ISP_NPL',
-    'ISP_OBH',
-    'ISP_OCO',
-    'ISP_PEN',
-    'ISP_PFL',
-    'ISP_PIT',
-    'ISP_PLA',
-    'ISP_PLC',
-    'ISP_PLL',
-    'ISP_PLP',
-    'ISP_PSF',
-    'ISP_REO',
-    'ISP_RES',
-    'ISP_RIP',
-    'ISP_RST',
-    'ISP_SCC',
-    'ISP_SCH',
-    'ISP_SFP',
-    'ISP_SLC',
-    'ISP_SMALL',
-    'ISP_SPX',
-    'ISP_SSH',
-    'ISP_STA',
-    'ISP_TINY',
-    'ISP_TOC',
-    'ISP_TTC',
-    'ISP_UCO',
-    'ISP_VER',
-    'ISP_VTN',
-    'ISS_DIALOG',
-    'ISS_FRONT_END',
-    'ISS_GAME',
-    'ISS_MPSPEEDUP',
-    'ISS_MULTI',
-    'ISS_PAUSED',
-    'ISS_REPLAY',
-    'ISS_SHIFTU',
-    'ISS_SHIFTU_FOLLOW',
-    'ISS_SHIFTU_NO_OPT',
-    'ISS_SHOW_2D',
-    'ISS_SOUND_MUTE',
-    'ISS_TEXT_ENTRY',
-    'ISS_VIEW_OVERRIDE',
-    'ISS_VISIBLE',
-    'ISS_WINDOWED',
-    'IS_ACR',
-    'IS_AXI',
-    'IS_AXM',
-    'IS_AXO',
-    'IS_BFN',
-    'IS_BTC',
-    'IS_BTN',
-    'IS_BTT',
-    'IS_CCH',
-    'IS_CIM',
-    'IS_CNL',
-    'IS_CON',
-    'IS_CPP',
-    'IS_CPR',
-    'IS_CRS',
-    'IS_CSC',
-    'IS_FIN',
-    'IS_FLG',
-    'IS_HCP',
-    'IS_HLV',
-    'IS_III',
-    'IS_ISI',
-    'IS_ISM',
-    'IS_JRR',
-    'IS_LAP',
-    'IS_MCI',
-    'IS_MOD',
-    'IS_MSL',
-    'IS_MSO',
-    'IS_MST',
-    'IS_MSX',
-    'IS_MTC',
-    'IS_NCI',
-    'IS_NCN',
-    'IS_NLP',
-    'IS_NPL',
-    'IS_OBH',
-    'IS_OCO',
-    'IS_PEN',
-    'IS_PFL',
-    'IS_PIT',
-    'IS_PLA',
-    'IS_PLC',
-    'IS_PLL',
-    'IS_PLP',
-    'IS_PSF',
-    'IS_REO',
-    'IS_RES',
-    'IS_RIP',
-    'IS_RST',
-    'IS_SCC',
-    'IS_SCH',
-    'IS_SFP',
-    'IS_SLC',
-    'IS_SMALL',
-    'IS_SPX',
-    'IS_SSH',
-    'IS_STA',
-    'IS_TINY',
-    'IS_TOC',
-    'IS_TTC',
-    'IS_VER',
-    'IS_VTN',
-    'JRR_2',
-    'JRR_3',
-    'JRR_6',
-    'JRR_7',
-    'JRR_REJECT',
-    'JRR_RESET',
-    'JRR_RESET_NO_REPAIR',
-    'JRR_SPAWN',
-    'LEAVR_BANNED',
-    'LEAVR_CPW',
-    'LEAVR_DISCO',
-    'LEAVR_HACK',
-    'LEAVR_JOOS',
-    'LEAVR_KICKED',
-    'LEAVR_LOSTCONN',
-    'LEAVR_OOS',
-    'LEAVR_SECURITY',
-    'LEAVR_TIMEOUT',
-    'LFS_BELARUSSIAN',
-    'LFS_BRAZILIAN',
-    'LFS_BULGARIAN',
-    'LFS_CASTELLANO',
-    'LFS_CATALAN',
-    'LFS_CROATIAN',
-    'LFS_CZECH',
-    'LFS_DANSK',
-    'LFS_DEUTSCH',
-    'LFS_ENGLISH',
-    'LFS_ESTONIAN',
-    'LFS_FRENCH',
-    'LFS_GALEGO',
-    'LFS_GREEK',
-    'LFS_HUNGARIAN',
-    'LFS_INDONESIAN',
-    'LFS_ITALIANO',
-    'LFS_JAPANESE',
-    'LFS_KOREAN',
-    'LFS_LATINO',
-    'LFS_LATVIAN',
-    'LFS_LITHUANIAN',
-    'LFS_NEDERLANDS',
-    'LFS_NORSK',
-    'LFS_POLSKI',
-    'LFS_PORTUGUESE',
-    'LFS_ROMANIAN',
-    'LFS_RUSSIAN',
-    'LFS_SERBIAN',
-    'LFS_SIMPLIFIED_CHINESE',
-    'LFS_SLOVAK',
-    'LFS_SLOVENSKI',
-    'LFS_SUOMI',
-    'LFS_SWEDISH',
-    'LFS_TRADITIONAL_CHINESE',
-    'LFS_TURKISH',
-    'LFS_UKRAINIAN',
-    'MARSH_IS_CP',
-    'MARSH_IS_AREA',
-    'MARSH_MARSHALL',
-    'MARSH_ROUTE',
-    'MAX_PLAYERS',
-    'MSO_O',
-    'MSO_PREFIX',
-    'MSO_SYSTEM',
-    'MSO_USER',
-    'NodeLap',
-    'NRM_NORMAL',
-    'NRM_WHEEL_TEMPS',
-    'NRM_WHEEL_DAMAGE',
-    'NRM_LIVE_SETTINGS',
-    'NRM_PIT_INSTRUCTIONS',
-    'OBH_CAN_MOVE',
-    'OBH_LAYOUT',
-    'OBH_ON_SPOT',
-    'OBH_WAS_MOVING',
-    'OCO_ZERO',
-    'OCO_1',
-    'OCO_2',
-    'OCO_3',
-    'OCO_LIGHTS_RESET',
-    'OCO_LIGHTS_SET',
-    'OCO_LIGHTS_UNSET',
-    'OCO_INDEX_MAIN',
-    'OG_BAR',
-    'OG_CTRL',
-    'OG_KM',
-    'OG_SHIFT',
-    'OG_TURBO',
-    'ObjectInfo',
-    'OutGaugePack',
-    'OutSimPack',
-    'PENALTY_30',
-    'PENALTY_45',
-    'PENALTY_DT',
-    'PENALTY_DT_VALID',
-    'PENALTY_NONE',
-    'PENALTY_SG',
-    'PENALTY_SG_VALID',
-    'PENR_ADMIN',
-    'PENR_FALSE_START',
-    'PENR_SPEEDING',
-    'PENR_STOP_LATE',
-    'PENR_STOP_SHORT',
-    'PENR_UNKNOWN',
-    'PENR_WRONG_WAY',
-    'PIF_AUTOCLUTCH',
-    'PIF_AUTOGEARS',
-    'PIF_AXIS_CLUTCH',
-    'PIF_CUSTOM_VIEW',
-    'PIF_HELP_B',
-    'PIF_INPITS',
-    'PIF_KB_NO_HELP',
-    'PIF_KB_STABILISED',
-    'PIF_MOUSE',
-    'PIF_RESERVED_2',
-    'PIF_RESERVED_32',
-    'PIF_RESERVED_4',
-    'PIF_SHIFTER',
-    'PIF_SWAPSIDE',
-    'PITLANE_DT',
-    'PITLANE_ENTER',
-    'PITLANE_EXIT',
-    'PITLANE_NO_PURPOSE',
-    'PITLANE_SG',
-    'PMO_ADD_OBJECTS',
-    'PMO_AVOID_CHECK',
-    'PMO_FILE_END',
-    'PMO_GET_Z',
-    'PMO_MOVE_MODIFY',
-    'PMO_POSITION',
-    'PMO_SELECTION',
-    'PMO_SELECTION_REAL',
-    'PMO_TINY_AXM',
-    'PMO_TTC_SEL',
-    'PMO_CLEAR_ALL',
-    'PMO_DEL_OBJECTS',
-    'PMO_LOADING_FILE',
-    'PSE_BODY_MAJOR',
-    'PSE_BODY_MINOR',
-    'PSE_FR_DAM',
-    'PSE_FR_WHL',
-    'PSE_LE_FR_DAM',
-    'PSE_LE_FR_WHL',
-    'PSE_LE_RE_DAM',
-    'PSE_LE_RE_WHL',
-    'PSE_NOTHING',
-    'PSE_NUM',
-    'PSE_REFUEL',
-    'PSE_RE_DAM',
-    'PSE_RE_WHL',
-    'PSE_RI_FR_DAM',
-    'PSE_RI_FR_WHL',
-    'PSE_RI_RE_DAM',
-    'PSE_RI_RE_WHL',
-    'PSE_SETUP',
-    'PSE_STOP',
-    'RIPOPT_FULL_PHYS',
-    'RIPOPT_LOOP',
-    'RIPOPT_SKINS',
-    'RIP_ALREADY',
-    'RIP_CORRUPTED',
-    'RIP_DEDICATED',
-    'RIP_DEST_OOB',
-    'RIP_NOT_FOUND',
-    'RIP_NOT_REPLAY',
-    'RIP_OK',
-    'RIP_OOS',
-    'RIP_UNKNOWN',
-    'RIP_UNLOADABLE',
-    'RIP_USER',
-    'RIP_WRONG_MODE',
-    'SETF_ABS_ENABLE',
-    'SETF_SYMM_WHEELS',
-    'SETF_TC_ENABLE',
-    'SMALL_ALC',
-    'SMALL_LCS',
-    'SMALL_NLI',
-    'SMALL_NONE',
-    'SMALL_RTP',
-    'SMALL_SSG',
-    'SMALL_SSP',
-    'SMALL_STP',
-    'SMALL_TMS',
-    'SMALL_VTA',
-    'SND_ERROR',
-    'SND_INVALIDKEY',
-    'SND_MESSAGE',
-    'SND_SILENT',
-    'SND_SYSMESSAGE',
-    'SSH_CORRUPTED',
-    'SSH_DEDICATED',
-    'SSH_NO_SAVE',
-    'SSH_OK',
-    'TINY_ALC',
-    'TINY_AXC',
-    'TINY_AXI',
-    'TINY_AXM',
-    'TINY_CLOSE',
-    'TINY_CLR',
-    'TINY_GTH',
-    'TINY_ISM',
-    'TINY_MCI',
-    'TINY_MPE',
-    'TINY_NCI',
-    'TINY_NCN',
-    'TINY_NLP',
-    'TINY_NONE',
-    'TINY_NPL',
-    'TINY_PING',
-    'TINY_REN',
-    'TINY_REO',
-    'TINY_REPLY',
-    'TINY_RES',
-    'TINY_RIP',
-    'TINY_RST',
-    'TINY_SCP',
-    'TINY_SLC',
-    'TINY_SST',
-    'TINY_VER',
-    'TINY_VTC',
-    'TTC_NONE',
-    'TTC_SEL',
-    'TTC_SEL_START',
-    'TTC_SEL_STOP',
-    'TYRE_HYBRID',
-    'TYRE_KNOBBLY',
-    'TYRE_NOT_CHANGED',
-    'TYRE_R1',
-    'TYRE_R2',
-    'TYRE_R3',
-    'TYRE_R4',
-    'TYRE_ROAD_NORMAL',
-    'TYRE_ROAD_SUPER',
-    'UCO_CIRCLE_ENTER',
-    'UCO_CIRCLE_LEAVE',
-    'UCO_CP_FWD',
-    'UCO_CP_REV',
-    'VIEW_ANOTHER',
-    'VIEW_CAM',
-    'VIEW_CUSTOM',
-    'VIEW_DRIVER',
-    'VIEW_FOLLOW',
-    'VIEW_HELI',
-    'VOTE_END',
-    'VOTE_NONE',
-    'VOTE_QUALIFY',
-    'VOTE_RESTART',
- ]
-
-
+import struct
 
 INSIM_VERSION = 8
 MAX_PLAYERS = 40
@@ -951,7 +421,7 @@ LCS_Mask_Siren = 0x300000       # bits  20-21 (Switches & 0x300000) - Siren   (0
 
 
 def _eat_null_chars(str_):
-    return str_.rstrip('\x00')
+    return str_.rstrip(b'\x00')
 
 
 class IS_ISI(object):
@@ -959,7 +429,7 @@ class IS_ISI(object):
 
     """
     pack_s = struct.Struct('4B2HBcH15sx15sx')
-    def __init__(self, ReqI=0, UDPPort=0, Flags=0, Prefix='\x00', Interval=0, Admin='', IName='pyinsim'):
+    def __init__(self, ReqI=0, UDPPort=0, Flags=0, Prefix=b'\x00', Interval=0, Admin=b'', IName=b'pyinsim'):
         """Create a new IS_ISI packet.
 
         Args:
@@ -1079,7 +549,7 @@ class IS_SCH(object):
 
     """
     pack_s = struct.Struct('4Bc3B')
-    def __init__(self, ReqI=0, CharB='\x00', Flags=0):
+    def __init__(self, ReqI=0, CharB=b'\x00', Flags=0):
         """Initialise a new IS_SCH packet.
 
         Args:
@@ -1228,7 +698,7 @@ class IS_MST(object):
 
     """
     pack_s = struct.Struct('4B63sx')
-    def __init__(self, ReqI=0, Msg=''):
+    def __init__(self, ReqI=0, Msg=b''):
         """Initialise a new IS_MST packet.
 
         Args:
@@ -1249,7 +719,7 @@ class IS_MTC(object):
 
     """
     pack_s = struct.Struct('8B')
-    def __init__(self, ReqI=0, Sound=0, UCID=0, PLID=0, Msg=''):
+    def __init__(self, ReqI=0, Sound=0, UCID=0, PLID=0, Msg=b''):
         """Initialise a new IS_MTC packet.
 
         Args:
@@ -1414,10 +884,12 @@ class IS_NPL(object):
     """New PLayer joining race (if PLID already exists, then leaving pits)
 
     """
-    pack_s = struct.Struct('6BH23sx8s3sx15sx8Bi4B')
+    # Rémi - update 0.6V
+    #pack_s = struct.Struct('6BH23sx8s3sx15sx8Bi4B')
+    pack_s = struct.Struct('6BH23sx8s3sx15sx16B')
     def unpack(self, data):
         self.Tyres = [0,0,0,0]
-        self.Size, self.Type, self.ReqI, self.PLID, self.UCID, self.PType, self.Flags, self.PName, self.Plate, self.CName, self.SName, self.Tyres[0], self.Tyres[1], self.Tyres[2], self.Tyres[3], self.H_Mass, self.H_TRes, self.Model, self.Pass, self.Spare, self.SetF, self.NumP, self.Sp2, self.Sp3 = self.pack_s.unpack(data)
+        self.Size, self.Type, self.ReqI, self.PLID, self.UCID, self.PType, self.Flags, self.PName, self.Plate, self.CName, self.SName, self.Tyres[0], self.Tyres[1], self.Tyres[2], self.Tyres[3], self.H_Mass, self.H_TRes, self.Model, self.Pass, self.RWAdj, self.FWAdj, self.Sp2, self.Sp3, self.SetF, self.NumP, self.Config, self.Fuel = self.pack_s.unpack(data)
         self.PName = _eat_null_chars(self.PName)
         #self.Plate = _eat_null_chars(self.Plate) # No trailing zero
         self.CName = _eat_null_chars(self.CName)
@@ -1448,7 +920,8 @@ class IS_LAP(object):
     """
     pack_s = struct.Struct('4B2I2H4B')
     def unpack(self, data):
-        self.Size, self.Type, self.ReqI, self.PLID, self.LTime, self.ETime, self.LapsDone, self.Flags, self.Sp0, self.Penalty, self.NumStops, self.Sp3 = self.pack_s.unpack(data)
+        # Rémi - update 0.6V
+        self.Size, self.Type, self.ReqI, self.PLID, self.LTime, self.ETime, self.LapsDone, self.Flags, self.Sp0, self.Penalty, self.NumStops, self.Fuel200 = self.pack_s.unpack(data)
         return self
 
 class IS_SPX(object):
@@ -1457,7 +930,8 @@ class IS_SPX(object):
     """
     pack_s = struct.Struct('4B2I4B')
     def unpack(self, data):
-        self.Size, self.Type, self.ReqI, self.PLID, self.STime, self.ETime, self.Split, self.Penalty, self.NumStops, self.Sp3 = self.pack_s.unpack(data)
+        # Rémi - update 0.6V
+        self.Size, self.Type, self.ReqI, self.PLID, self.STime, self.ETime, self.Split, self.Penalty, self.NumStops, self.Fuel200 = self.pack_s.unpack(data)
         return self
 
 class IS_PIT(object):
@@ -1467,7 +941,8 @@ class IS_PIT(object):
     pack_s = struct.Struct('4B2H8B2I')
     def unpack(self, data):
         self.Tyres = [0, 0, 0, 0]
-        self.Size, self.Type, self.ReqI, self.PLID, self.LapsDone, self.Flags, self.Sp0, self.Penalty, self.NumStops, self.Sp3, self.Tyres[0], self.Tyres[1], self.Tyres[2], self.Tyres[3], self.Work, self.Spare = self.pack_s.unpack(data)
+        # Rémi - update 0.6V
+        self.Size, self.Type, self.ReqI, self.PLID, self.LapsDone, self.Flags, self.FuelAdd, self.Penalty, self.NumStops, self.Sp3, self.Tyres[0], self.Tyres[1], self.Tyres[2], self.Tyres[3], self.Work, self.Spare = self.pack_s.unpack(data)
         return self
 
 class IS_PSF(object):
@@ -1579,7 +1054,7 @@ class IS_REO(object):
         return self.pack_s.pack(self.Size, self.Type, self.ReqI, len(self.PLID)) + plid
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.NumP = self.pack_s.unpack(data[:4])
-        self.PLID = [ord(data[4+i]) for i in xrange(self.NumP)]
+        self.PLID = [ord(data[4+i]) for i in range(self.NumP)]
         return self
 
 class IS_NLP(object):
@@ -1590,7 +1065,7 @@ class IS_NLP(object):
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.NumP = self.pack_s.unpack(data[:4])
         data = data[4:]
-        self.Info = [NodeLap(data, i) for i in xrange(0, self.NumP * 6, 6)]
+        self.Info = [NodeLap(data, i) for i in range(0, self.NumP * 6, 6)]
         return self
 
 class NodeLap(object):
@@ -1612,7 +1087,7 @@ class IS_MCI(object):
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.NumC = self.pack_s.unpack(data[:4])
         data = data[4:]
-        self.Info = [CompCar(data, i) for i in xrange(0, self.NumC * 28, 28)]
+        self.Info = [CompCar(data, i) for i in range(0, self.NumC * 28, 28)]
         return self
 
 class CompCar(object):
@@ -1631,7 +1106,7 @@ class IS_MSX(object):
 
     """
     pack_s = struct.Struct('4B95sx')
-    def __init__(self, ReqI=0, Msg=''):
+    def __init__(self, ReqI=0, Msg=b''):
         """Initialise a new IS_MSX packet.
 
         Args:
@@ -1652,7 +1127,7 @@ class IS_MSL(object):
 
     """
     pack_s = struct.Struct('4B127sx')
-    def __init__(self, ReqI=0, Sound=0, Msg=''):
+    def __init__(self, ReqI=0, Sound=0, Msg=b''):
         """Initialise a new IS_MSL packet.
 
         Args:
@@ -1733,7 +1208,7 @@ class IS_BTN(object):
 
     """
     pack_s = struct.Struct('12B')
-    def __init__(self, ReqI=0, UCID=0, ClickID=0, Inst=0, BStyle=0, TypeIn=0, L=0, T=0, W=0, H=0, Text=''):
+    def __init__(self, ReqI=0, UCID=0, ClickID=0, Inst=0, BStyle=0, TypeIn=0, L=0, T=0, W=0, H=0, Text=b''):
         """Initialise a new IS_BTN packet.
 
         Args:
@@ -1790,8 +1265,8 @@ class IS_RIP(object):
     """Replay Information Packet
 
     """
-    pack_s = struct.Struct('8B2H63sx')
-    def __init__(self, ReqI=0, Error=0, MPR=0, Paused=0, Options=0, CTime=0, TTime=0, RName=''):
+    pack_s = struct.Struct('8B2L63sx')
+    def __init__(self, ReqI=0, Error=0, MPR=0, Paused=0, Options=0, CTime=0, TTime=0, RName=b''):
         """Initialise a new IS_RIP packet.
 
         Args:
@@ -1805,7 +1280,7 @@ class IS_RIP(object):
             RName   : zero or replay name: last byte must be zero
 
         """
-        self.Size = 76
+        self.Size = 80
         self.Type = ISP_RIP
         self.ReqI = ReqI
         self.Error = Error
@@ -1828,7 +1303,7 @@ class IS_SSH(object):
 
     """
     pack_s = struct.Struct('8B31sx')
-    def __init__(self, ReqI=0, Error=0, BMP=''):
+    def __init__(self, ReqI=0, Error=0, BMP=b''):
         """Initialise a new IS_SSH packet.
 
         Args:
@@ -2014,14 +1489,14 @@ class IS_AXM(object):
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.NumO, self.UCID, self.PMOAction, self.PMOFlags, self.Sp3 = self.pack_s.unpack(data[:8])
         data = data[8:]
-        self.Info = [ObjectInfo(data, i) for i in xrange(0, self.NumO * 8, 8)]
+        self.Info = [ObjectInfo(data, i) for i in range(0, self.NumO * 8, 8)]
         return self
 
 class IS_ACR(object):
     pack_s = struct.Struct('8B')
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.Zero, self.UCID, self.Admin, self.Result, self.Sp3 = self.pack_s.unpack(data[:8])
-        self.Text = struct.unpack('%dsx' % self.Size - 9, data[8:])
+        self.Text = struct.unpack('%dsx' % (self.Size - 9), data[8:])[0]
         self.Text = _eat_null_chars(self.Text)
         return self
 
@@ -2130,7 +1605,7 @@ class IR_HOS(object):
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.NumHosts = self.pack_s.unpack(data[:4])
         data = data[4:]
-        self.Info = [HInfo(data, i) for i in xrange(0, self.NumHosts * 40, 40)]
+        self.Info = [HInfo(data, i) for i in range(0, self.NumHosts * 40, 40)]
         return self
 
 class HInfo(object):
@@ -2142,7 +1617,7 @@ class HInfo(object):
 
 class IR_SEL(object):
     pack_s = struct.Struct('4B31sx15sx15sx')
-    def __init__(self, ReqI=0, HName='', Admin='', Spec=''):
+    def __init__(self, ReqI=0, HName=b'', Admin=b'', Spec=b''):
         self.Size = 68
         self.Type = IRP_SEL
         self.ReqI = ReqI
@@ -2170,8 +1645,7 @@ class IR_ARP(object):
         return self
 
 class IR_ERR(object):
-    pack_s = struct.Struct('4B'
-)
+    pack_s = struct.Struct('4B')
     def unpack(self, data):
         self.Size, self.Type, self.ReqI, self.ErrNo = self.pack_s.unpack(data)
         return self
@@ -2215,6 +1689,134 @@ DL_BATTERY = 512
 DL_ABS = 1024
 DL_SPARE = 2048
 DL_NUM= 4096
+
+
+class IS_OBH(object):
+    pack_s = struct.Struct('4B2H4B2h2h4B')
+    def unpack(self, data):
+        self.C = CarContOBJ()
+        self.Size, self.Type, self.ReqI, self.PLID, self.SpClose, self.Time, self.C.Direction, self.C.Heading, self.C.Speed, self.C.Zbyte, self.C.X, self.C.Y, self.X, self.Y, self.Zbyte, self.Sp1, self.Index, self.OBHFlags = self.pack_s.unpack(data)
+        return self
+
+
+# Bits for "OutSim Opts" integer in cfg.txt
+# OutSim Opts is hexadecimal - for all fields set OutSim Opts to 1ff
+# The resulting UDP packet size is 280 (the full OutSim2 pack below)
+OSO_HEADER = 1
+OSO_ID = 2
+OSO_TIME = 4
+OSO_MAIN = 8
+OSO_INPUTS = 16
+OSO_DRIVE = 32
+OSO_DISTANCE = 64
+OSO_WHEELS = 128
+OSO_EXTRA_1 = 256
+
+
+class OutSimMain(object):
+    #pack_s = struct.Struct('12f3i')
+    def __init__(self):
+        self.AngVel = [0.0, 0.0, 0.0]
+        self.Heading = 0.0
+        self.Pitch = 0.0
+        self.Roll = 0.0
+        self.Accel = [0.0, 0.0, 0.0]
+        self.Vel = [0.0, 0.0, 0.0]
+        self.Pos = [0, 0, 0]
+    def unpack(self, data):
+        self.AngVel[0],self.AngVel[1],self.AngVel[2], self.Heading, self.Pitch, self.Roll, self.Accel[0],self.Accel[1],self.Accel[2], self.Vel[0],self.Vel[1],self.Vel[2], self.Pos[0],self.Pos[1],self.Pos[2] = data
+        return self
+
+class OutSimInputs(object):
+    #pack_s = struct.Struct('5f')
+    def __init__(self):
+        self.Throttle = 0.0
+        self.Brake = 0.0
+        self.InputSteer = 0.0
+        self.Clutch = 0.0
+        self.Handbrake = 0.0
+    def unpack(self, data):
+        self.Throttle, self.Brake, self.InputSteer, self.Clutch, self.Handbrake = data
+        return self
+
+
+class OutSimWheel(object):
+    #pack_s = struct.Struct('7f4B2f')
+    def __init__(self):
+        self.SuspDeflect = 0.0
+        self.Steer = 0.0
+        self.XForce = 0.0
+        self.YForce = 0.0
+        self.VerticalLoad = 0.0
+        self.AngVel = 0.0
+        self.LeanRelToRoad = 0.0
+        self.AirTemp = 0
+        self.SlipFraction = 0
+        self.Touching = 0
+        self.Sp3 = 0
+        self.SlipRatio = 0.0
+        self.TanSlipAngle = 0.0
+    def unpack(self, data):
+        self.SuspDeflect, self.Steer, self.XForce, self.YForce, self.VerticalLoad, self.AngVel, self.LeanRelToRoad, self.AirTemp, self.SlipFraction, self.Touching, self.Sp3, self.SlipRatio, self.TanSlipAngle = data
+        return self
+
+class OutSimPack2(object):
+    pack_s = b''
+    def __init__(self, mode):
+        self.mode = mode
+        s = ''
+        if bool(self.mode & OSO_HEADER):
+            s = s + '4B'
+        if bool(self.mode & OSO_ID):
+            s = s + 'I'
+        if bool(self.mode & OSO_TIME):
+            s = s + 'i'
+        if bool(self.mode & OSO_MAIN):
+            s = s + '12f3i'
+        if bool(self.mode & OSO_INPUTS):
+            s = s + '5f'
+        if bool(self.mode & OSO_DRIVE):
+            s = s + '4B2f'
+        if bool(self.mode & OSO_DISTANCE):
+            s = s + '2f'
+        if bool(self.mode & OSO_WHEELS):
+            s = s + '7f4B2f'*4
+        if bool(self.mode & OSO_EXTRA_1):
+            s = s + '2f'
+
+        self.pack_s = struct.Struct(s)
+
+    def unpack(self, data):
+        t = self.pack_s.unpack(data)
+        if bool(self.mode & OSO_HEADER):
+            self.L, self.F, self.S, self.T = t[:4]
+            t = t[4:]
+        if bool(self.mode & OSO_ID):
+            self.ID = t[0]
+            t = t[1:]
+        if bool(self.mode & OSO_TIME):
+            self.Time = t[0]
+            t = t[1:]
+        if bool(self.mode & OSO_MAIN):
+            self.OSMain = OutSimMain().unpack(t[:15])
+            t = t[15:]
+        if bool(self.mode & OSO_INPUTS):
+            self.OSInputs = OutSimInputs().unpack(t[:5])
+            t = t[5:]
+        if bool(self.mode & OSO_DRIVE):
+            self.Gear, self.Sp1, self.Sp2, self.Sp3, self.EngineAngVel, self.MaxTorqueAtVel = t[:6]
+            t = t[6:]
+        if bool(self.mode & OSO_DISTANCE):
+            self.CurrentLapDist, self.IndexedDistance = t[:2]
+            t = t[2:]
+        if bool(self.mode & OSO_WHEELS):
+            self.OSWheels = [OutSimWheel().unpack(t[13*i:13*(i+1)]) for i in range(4)]
+            t = t[13*4:]
+        if bool(self.mode & OSO_EXTRA_1):
+            self.SteerTorque, self.Spare = t[:2]
+            #t = t[2:]
+        return self
+
 
 class OutGaugePack(object):
     pack_s = struct.Struct('I3sxH2B7f2I3f15sx15sx')

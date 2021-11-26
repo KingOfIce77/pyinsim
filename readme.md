@@ -6,8 +6,7 @@ enumerations for sending and receiving data between your program and the game.
 
 ## REQUIREMENTS
 
-The module requires Python 2.7 or better to run. Note: It does not currently 
-support Python 3.0. You can download Python from the following URL:
+The module requires Python 3.0 or better to run. You can download Python from the following URL:
 
 http://www.python.org/download/
 

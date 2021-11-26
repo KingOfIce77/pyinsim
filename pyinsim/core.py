@@ -1,20 +1,20 @@
 # core.py - core library module for pyinsim
 #
-# Copyright 2008-2015 Alex McBride <xandermcbride@gmail.com>
+# Copyright 2008-2020 Alex McBride <xandermcbride@gmail.com>
 #
 # This software may be used and distributed according to the terms of the
 # GNU Lesser General Public License version 3 or any later version.
 #
 
+import asyncore
 # Dependencies
 import socket
-import asyncore
-import traceback
 import threading
 import time
+import traceback
 
 # Libraries
-import insim as insim_
+import pyinsim.insim as insim_
 
 __all__ = [
     'EVT_ALL',
@@ -23,6 +23,7 @@ __all__ = [
     'EVT_INIT',
     'EVT_OUTGAUGE',
     'EVT_OUTSIM',
+    'EVT_OUTSIM2',
     'EVT_TIMEOUT',
     'INSIM_VERSION',
     'InSimError',
@@ -32,6 +33,7 @@ __all__ = [
     'isrunning',
     'outgauge',
     'outsim',
+    'outsim2',
     'packet',
     'relay',
     'run',
@@ -42,12 +44,13 @@ __all__ = [
 
 # Constants.
 PYINSIM_VERSION = '2.1.0'
-INSIM_VERSION = 6
+INSIM_VERSION = 8
 _TCP_BUFFER_SIZE = 2048
 _UDP_BUFFER_SIZE = 512
 _TIMEOUT = 0.05
 _OUTGAUGE_SIZE = (92, 96)
 _OUTSIM_SIZE = (64, 68)
+_OUTSIM2_HEADER = b'LFST'
 _PACKET_MAP = {
     insim_.ISP_ISI: insim_.IS_ISI,
     insim_.ISP_VER: insim_.IS_VER,
@@ -130,6 +133,7 @@ EVT_ALL = 259
 EVT_OUTGAUGE = 260
 EVT_OUTSIM = 261
 EVT_TIMEOUT = 262
+EVT_OUTSIM2 = 261
 
 
 class InSimError(Exception):
@@ -138,8 +142,8 @@ class InSimError(Exception):
 
 
 def insim(host='127.0.0.1', port=29999, ReqI=0, UDPPort=0, Flags=0, 
-          Prefix='\x00', Interval=0, Admin='', IName='pyinsim', 
-          name='localhost'):
+          Prefix=b'\x00', Interval=0, Admin=b'', IName=b'pyinsim', 
+          name=b'localhost'):
     """Initialize a new InSim connection.
     
     Args:
@@ -171,8 +175,8 @@ def insim(host='127.0.0.1', port=29999, ReqI=0, UDPPort=0, Flags=0,
     return insim
 
     
-def relay(host='isrelay.lfs.net', port=47474, ReqI=0, HName='', Admin='', 
-          Spec='', name='localhost'):
+def relay(host='isrelay.lfs.net', port=47474, ReqI=0, HName=b'', Admin=b'', 
+          Spec=b'', name=b'localhost'):
     """Initialize a new InSim relay connection.
     
     Args:
@@ -195,7 +199,7 @@ def relay(host='isrelay.lfs.net', port=47474, ReqI=0, HName='', Admin='',
     return relay
     
 
-def outgauge(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name='localhost'):
+def outgauge(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name=b'localhost'):
     """Initialize a new OutGauge connection.
     
     Args:
@@ -216,7 +220,7 @@ def outgauge(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name='lo
     return outgauge
 
 
-def outsim(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name='localhost'):
+def outsim(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name=b'localhost'):
     """Initialize a new OutSim connection.
     
     Args:
@@ -236,7 +240,28 @@ def outsim(host='127.0.0.1', port=30000, callback=None, timeout=30.0, name='loca
         outsim_.bind(EVT_OUTSIM, callback)
     return outsim_
 
-    
+
+def outsim2(host='127.0.0.1', port=30000, callback=None, timeout=30.0, mode=1, name=b'localhost'):
+    """Initialize a new OutSim connection.
+
+    Args:
+        host - The host to connect to.
+        port - The port to connect to the host through.
+        callback - An optional function to call when an OutSim packet is received.
+        timeout - Number of seconds to wait for a packet before timing out.
+        name - An optional name for the connection.
+
+    Returns:
+        An initialized OutSim host.
+
+    """
+    outsim_ = _OutSim(name, timeout, mode)
+    outsim_._connect(host, port)
+    if callback:
+        outsim_.bind(EVT_OUTSIM2, callback)
+    return outsim_
+
+
 def packet(type_, **kwargs):
     """Create a packet object.
     
@@ -278,7 +303,7 @@ def run(background=False):
     
     """
     if background:
-        threading.Thread(target=asyncore.loop, args=[_TIMEOUT]).start()
+        threading.Thread(target=asyncore.loop, args=[_TIMEOUT], name='pyinsim').start()
     else:
         asyncore.loop(timeout=_TIMEOUT)
 
@@ -299,8 +324,8 @@ class _TcpSocket(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self._dispatch_to = dispatch_to
-        self._send_buff = ''
-        self._recv_buff = ''
+        self._send_buff = b''
+        self._recv_buff = b''
         
     def __len__(self):
         return len(self._recv_buff)
@@ -331,8 +356,8 @@ class _TcpSocket(asyncore.dispatcher):
         self._dispatch_to._handle_error()
         
     def get_packets(self):
-        while self._recv_buff and len(self._recv_buff) >= ord(self._recv_buff[0]):
-            size = ord(self._recv_buff[0])   
+        while self._recv_buff and len(self._recv_buff) >= self._recv_buff[0]:
+            size = self._recv_buff[0]
             
             # Check size is multiple of four.
             if size % 4 > 0:
@@ -348,7 +373,7 @@ class _UdpSocket(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._dispatch_to = dispatch_to
-        self._recv_buff = ''        
+        self._recv_buff = b''        
         self._timeout = timeout
         self.connected = False
         
@@ -449,7 +474,7 @@ class _Binding(object):
         
 class _InSim(_Binding):
     """Class to manage an InSim connection with LFS."""
-    def __init__(self, name='localhost'):
+    def __init__(self, name=b'localhost'):
         """Create a new InSim object.
         
         Args:
@@ -510,7 +535,7 @@ class _InSim(_Binding):
         """
         if ucid or plid:
             self._tcp.send(insim_.IS_MTC(Msg=msg, UCID=ucid, PLID=plid).pack())
-        elif msg.startswith('/') and len(msg) < 64:
+        elif msg.startswith(b'/') and len(msg) < 64:
             self._tcp.send(insim_.IS_MST(Msg=msg).pack())            
         elif len(msg) < 96:
             self._tcp.send(insim_.IS_MSX(Msg=msg).pack())
@@ -537,7 +562,12 @@ class _InSim(_Binding):
     def _handle_udp_read(self):
         data = self._udp.get_packet()
         size = len(data)
-        if size in _OUTSIM_SIZE:
+        if data[0:4] == _OUTSIM2_HEADER:
+            callbacks = self._callbacks.get(EVT_OUTSIM2)
+            if callbacks:
+                packet = insim_.OutSimPack2(self.mode).unpack(data)
+                [c(self, packet) for c in callbacks]
+        elif size in _OUTSIM_SIZE:
             callbacks = self._callbacks.get(EVT_OUTSIM)
             if callbacks:
                 packet = insim_.OutSimPack().unpack(data)
@@ -551,10 +581,10 @@ class _InSim(_Binding):
             self._handle_insim_packet(data)
     
     def _handle_insim_packet(self, data):
-        ptype = ord(data[1])
+        ptype = data[1]
         
         # Keep alive.
-        if ptype == insim_.ISP_TINY and ord(data[3]) == insim_.TINY_NONE:
+        if ptype == insim_.ISP_TINY and data[3] == insim_.TINY_NONE:
             self._tcp.send(data)
             
         # Handle packet event.
@@ -570,7 +600,7 @@ class _InSim(_Binding):
             
 class _OutSim(_Binding):
     """Class to manage an OutGauge or OutSim connection."""
-    def __init__(self, name='localhost', timeout=0.0):
+    def __init__(self, name=b'localhost', timeout=0.0, mode=1):
         """Create a new OutGauge or OutSim object.
         
         Args:
@@ -580,6 +610,7 @@ class _OutSim(_Binding):
         _Binding.__init__(self)
         self.name = name
         self.hostaddr = ()
+        self.mode = mode
         self._udp = _UdpSocket(dispatch_to=self, timeout=timeout)
         
     def _connect(self, host, port):
@@ -589,11 +620,16 @@ class _OutSim(_Binding):
     def close(self):
         """Close the connection."""
         self._udp.close()
-        
+
     def _handle_udp_read(self):
         data = self._udp.get_packet()
         size = len(data)
-        if size in _OUTSIM_SIZE:
+        if data[0:4] == _OUTSIM2_HEADER:
+            callbacks = self._callbacks.get(EVT_OUTSIM2)
+            if callbacks:
+                packet = insim_.OutSimPack2(self.mode).unpack(data)
+                [c(self, packet) for c in callbacks]
+        elif size in _OUTSIM_SIZE:
             callbacks = self._callbacks.get(EVT_OUTSIM)
             if callbacks:
                 packet = insim_.OutSimPack().unpack(data)
