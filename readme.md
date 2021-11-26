@@ -46,6 +46,8 @@ Written by Alex McBride
 Copyright Alex McBride 2012-2019
 Website: https://github.com/alexmcbride/pyinsim
 
+Updated by KingOfIce 2020-2021
+
 ## THANKS
 
 Thanks to Constantin Kopplinger (morpha) for his work on the strmanip module.
